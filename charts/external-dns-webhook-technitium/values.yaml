@@ -1,0 +1,136 @@
+# Default values for external-dns-webhook-technitium
+
+# Number of replicas
+replicaCount: 1
+
+image:
+  repository: external-dns-webhook-technitium
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# Technitium DNS server configuration
+technitium:
+  # URL of the Technitium DNS server API
+  # Format: http://technitium-dns.namespace.svc.cluster.local:5380
+  url: "http://technitium-dns:5380"
+  
+  # Authentication credentials
+  username: "admin"
+  password: "admin"
+  
+  # Optional: API token (if using token-based auth instead of username/password)
+  token: ""
+  
+  # Domain filter - only manage DNS records for these domains
+  # Empty list means all domains will be managed
+  domainFilter: []
+  # Example:
+  # domainFilter:
+  #   - example.com
+  #   - subdomain.example.com
+
+# Service configuration
+service:
+  type: ClusterIP
+  port: 8888
+  annotations: {}
+
+# ServiceAccount configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: ""
+
+# Pod annotations
+podAnnotations: {}
+
+# Pod security context
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  fsGroup: 1000
+
+# Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+  capabilities:
+    drop:
+    - ALL
+
+# Resource limits and requests
+resources:
+  limits:
+    cpu: 200m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+
+# Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /healthz
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 5
+  successThreshold: 1
+  failureThreshold: 3
+
+# Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /readyz
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  successThreshold: 1
+  failureThreshold: 3
+
+# Node selector
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Log level (debug, info, warn, error)
+logLevel: "info"
+
+# Log format (text, json)
+logFormat: "text"
+
+# Environment variables
+env: []
+# Example:
+# env:
+#   - name: CUSTOM_VAR
+#     value: "custom-value"
+
+# Extra volumes
+extraVolumes: []
+# Example:
+# extraVolumes:
+#   - name: cache
+#     emptyDir: {}
+
+# Extra volume mounts
+extraVolumeMounts: []
+# Example:
+# extraVolumeMounts:
+#   - name: cache
+#     mountPath: /cache

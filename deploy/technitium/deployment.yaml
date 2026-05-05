@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: technitium-dns-data
+  namespace: external-dns
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: technitium-dns
+  namespace: external-dns
+  labels:
+    app: technitium-dns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: technitium-dns
+  template:
+    metadata:
+      labels:
+        app: technitium-dns
+    spec:
+      containers:
+      - name: technitium
+        image: technitium/dns-server:latest
+        ports:
+        - containerPort: 5380
+          name: http
+          protocol: TCP
+        - containerPort: 53
+          name: dns-tcp
+          protocol: TCP
+        - containerPort: 53
+          name: dns-udp
+          protocol: UDP
+        env:
+        - name: DNS_SERVER_DOMAIN
+          value: "dns-server"
+        - name: DNS_SERVER_ADMIN_PASSWORD
+          value: "admin"
+        volumeMounts:
+        - name: data
+          mountPath: /etc/dns
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: technitium-dns-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: technitium-dns
+  namespace: external-dns
+  labels:
+    app: technitium-dns
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5380
+    targetPort: http
+    protocol: TCP
+    name: http
+  - port: 53
+    targetPort: dns-tcp
+    protocol: TCP
+    name: dns-tcp
+  - port: 53
+    targetPort: dns-udp
+    protocol: UDP
+    name: dns-udp
+  selector:
+    app: technitium-dns

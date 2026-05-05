@@ -1,0 +1,31 @@
+🎉 external-dns-webhook-technitium has been deployed!
+
+Chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+Release: {{ .Release.Name }}
+Namespace: {{ .Release.Namespace }}
+
+The webhook is now running and ready to receive requests from external-dns.
+
+🔗 Webhook Service URL:
+   http://{{ include "external-dns-webhook-technitium.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+📝 Configuration:
+   Technitium URL: {{ .Values.technitium.url }}
+   Log Level: {{ .Values.logLevel }}
+   {{- if .Values.technitium.domainFilter }}
+   Domain Filter: {{ join ", " .Values.technitium.domainFilter }}
+   {{- else }}
+   Domain Filter: None (managing all domains)
+   {{- end }}
+
+📊 To check the status:
+   kubectl get pods -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "external-dns-webhook-technitium.name" . }}
+
+📖 To view logs:
+   kubectl logs -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "external-dns-webhook-technitium.name" . }} --tail=50 -f
+
+🔧 To connect external-dns to this webhook, use:
+   --provider=webhook
+   --webhook-provider-url=http://{{ include "external-dns-webhook-technitium.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}
+
+For more information, visit: https://github.com/yourusername/external-dns-webhook-technitium

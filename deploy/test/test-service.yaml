@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: test-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: test-service
+  namespace: test-app
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: test.example.com
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 80
+    name: http
+  selector:
+    app: test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test-app
+  namespace: test-app
+  labels:
+    app: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: test
+  template:
+    metadata:
+      labels:
+        app: test
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:alpine
+        ports:
+        - containerPort: 80
+          name: http
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi

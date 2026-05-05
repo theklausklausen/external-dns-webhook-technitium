@@ -1,0 +1,17 @@
+apiVersion: v2
+name: external-dns-webhook-technitium
+description: A Helm chart for external-dns webhook provider for Technitium DNS
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - external-dns
+  - dns
+  - technitium
+  - webhook
+home: https://github.com/yourusername/external-dns-webhook-technitium
+sources:
+  - https://github.com/yourusername/external-dns-webhook-technitium
+maintainers:
+  - name: Your Name
+    email: your.email@example.com

@@ -1,93 +1,341 @@
 # external-dns-webhook-technitium
 
+[![Go Version](https://img.shields.io/badge/go-1.21-blue.svg)](https://golang.org)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
+A webhook provider for [external-dns](https://github.com/kubernetes-sigs/external-dns) that integrates with [Technitium DNS Server](https://technitium.com/dns/), enabling automatic DNS record management for Kubernetes services and ingresses.
 
-## Getting started
+## Features
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+- 🔄 Automatic DNS record synchronization from Kubernetes to Technitium DNS
+- 🎯 Support for A, AAAA, CNAME, and TXT records
+- 🔐 Token and username/password authentication
+- 🌐 Domain filtering for selective DNS management
+- 📊 Health checks and readiness probes
+- 🐳 Docker and Kubernetes-ready
+- 🚀 Complete local development environment with minikube
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+## Quick Start
 
-## Add your files
+### Prerequisites
 
-* [Create](https://docs.gitlab.com/user/project/repository/web_editor/#create-a-file) or [upload](https://docs.gitlab.com/user/project/repository/web_editor/#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+- [Go 1.21+](https://go.dev/doc/install)
+- [Docker](https://docs.docker.com/get-docker/)
+- [minikube](https://minikube.sigs.k8s.io/docs/start/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [just](https://github.com/casey/just) (task runner)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/klausklausen/external-dns-webhook-technitium.git
+   cd external-dns-webhook-technitium
+   ```
+
+2. **Initialize Go modules:**
+   ```bash
+   just init
+   ```
+
+3. **Start the complete environment:**
+   ```bash
+   just start
+   ```
+
+   This command will:
+   - Start a minikube cluster
+   - Build the webhook Docker image
+   - Deploy Technitium DNS server
+   - Deploy the webhook
+   - Deploy external-dns
+
+4. **Check the status:**
+   ```bash
+   just status
+   ```
+
+### Testing the Setup
+
+Create a test service to verify DNS record creation:
+
+```bash
+just test-service
+```
+
+Check the logs to see DNS records being created:
+
+```bash
+# View webhook logs
+just logs-webhook
+
+# View external-dns logs
+just logs-external-dns
+```
+
+Access Technitium UI to verify DNS records:
+
+```bash
+just port-forward-technitium
+# Then open http://localhost:5380 in your browser
+# Default credentials: admin / admin
+```
+
+## Configuration
+
+### Environment Variables
+
+The webhook can be configured using the following environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `TECHNITIUM_URL` | `http://localhost:5380` | Technitium DNS server URL |
+| `TECHNITIUM_USER` | `admin` | Technitium username |
+| `TECHNITIUM_PASSWORD` | `admin` | Technitium password |
+| `TECHNITIUM_TOKEN` | - | Technitium API token (overrides user/password) |
+| `WEBHOOK_ADDR` | `:8888` | Webhook server listen address |
+| `DOMAIN_FILTER` | - | Comma-separated list of domains to manage |
+| `DRY_RUN` | `false` | Enable dry-run mode (no changes made) |
+| `LOG_LEVEL` | `info` | Log level (debug, info, warn, error) |
+| `LOG_FORMAT` | `text` | Log format (text, json) |
+
+### Command Line Flags
+
+All environment variables can also be specified as command line flags:
+
+```bash
+./webhook \
+  --technitium-url=http://dns.example.com:5380 \
+  --technitium-user=admin \
+  --technitium-password=secret \
+  --domain-filter=example.com,test.com \
+  --log-level=debug
+```
+
+## Architecture
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.kk.int/klausklausen/external-dns-webhook-technitium.git
-git branch -M main
-git push -uf origin main
+┌─────────────────┐
+│   Kubernetes    │
+│   (Services/    │
+│   Ingresses)    │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  external-dns   │
+│   (watches K8s  │
+│    resources)   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│     Webhook     │
+│   (this project)│
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│   Technitium    │
+│   DNS Server    │
+└─────────────────┘
 ```
 
-## Integrate with your tools
+1. **external-dns** watches Kubernetes resources (Services, Ingresses) for DNS annotations
+2. **Webhook** receives requests from external-dns and translates them to Technitium API calls
+3. **Technitium DNS Server** stores and serves the DNS records
 
-* [Set up project integrations](https://gitlab.kk.int/klausklausen/external-dns-webhook-technitium/-/settings/integrations)
+## Development
 
-## Collaborate with your team
+### Project Structure
 
-* [Invite team members and collaborators](https://docs.gitlab.com/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/user/project/merge_requests/creating_merge_requests/)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/user/project/issues/managing_issues/#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+```
+.
+├── cmd/
+│   └── webhook/          # Main application entry point
+├── internal/
+│   ├── technitium/       # Technitium API client
+│   └── webhook/          # Webhook server and provider
+├── deploy/
+│   ├── kubernetes/       # Webhook deployment manifests
+│   ├── technitium/       # Technitium deployment manifests
+│   └── external-dns/     # external-dns deployment manifests
+├── docs/                 # Additional documentation
+├── Dockerfile            # Multi-stage Docker build
+├── justfile              # Task automation
+└── README.md             # This file
+```
 
-## Test and Deploy
+### Common Tasks
 
-Use the built-in continuous integration in GitLab.
+```bash
+# Build the binary locally
+just build
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/topics/autodevops/requirements/)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ci/environments/protected_environments/)
+# Run tests
+just test
 
-***
+# Build Docker image
+just docker-build
 
-# Editing this README
+# View logs
+just logs-webhook
+just logs-technitium
+just logs-external-dns
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
+# Restart services
+just restart-webhook
+just restart-external-dns
 
-## Suggestions for a good README
+# Clean up
+just clean          # Delete Kubernetes resources
+just clean-all      # Delete everything including minikube
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+### Making Changes
 
-## Name
-Choose a self-explaining name for your project.
+1. Make your code changes
+2. Rebuild the Docker image: `just docker-build`
+3. Redeploy the webhook: `just redeploy-webhook`
+4. Check the logs: `just logs-webhook`
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Usage with Kubernetes
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Service Annotation
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+To create DNS records for a Kubernetes Service, add the `external-dns.alpha.kubernetes.io/hostname` annotation:
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-service
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: my-app.example.com
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+  selector:
+    app: my-app
+```
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### Ingress Annotation
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+For Ingress resources, external-dns automatically uses the hostname from the Ingress spec:
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: my-ingress
+spec:
+  rules:
+  - host: my-app.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: my-service
+            port:
+              number: 80
+```
+
+### Custom TTL
+
+Set a custom TTL for DNS records:
+
+```yaml
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io/hostname: my-app.example.com
+    external-dns.alpha.kubernetes.io/ttl: "60"
+```
+
+## Troubleshooting
+
+### Webhook not connecting to Technitium
+
+Check the webhook configuration:
+```bash
+kubectl get configmap external-dns-webhook-technitium -n external-dns -o yaml
+```
+
+Verify Technitium is running:
+```bash
+kubectl get pods -n external-dns -l app=technitium-dns
+```
+
+### DNS records not being created
+
+Check external-dns logs:
+```bash
+just logs-external-dns
+```
+
+Check webhook logs:
+```bash
+just logs-webhook
+```
+
+Verify the service has the correct annotation:
+```bash
+kubectl get service <service-name> -o yaml | grep external-dns
+```
+
+### Permission issues
+
+Verify RBAC is correctly configured:
+```bash
+kubectl get clusterrolebinding external-dns
+kubectl get serviceaccount external-dns -n external-dns
+```
+
+## API Endpoints
+
+The webhook exposes the following endpoints:
+
+- `GET /` - Service information
+- `GET /healthz` - Health check
+- `GET /readyz` - Readiness check
+- `GET /records` - List all DNS records
+- `POST /records` - Apply DNS record changes
+- `POST /adjustendpoints` - Adjust endpoints before processing
 
 ## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Contributions are welcome! Please follow these steps:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
-For open source projects, say how it is licensed.
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Acknowledgments
+
+- [external-dns](https://github.com/kubernetes-sigs/external-dns) - The external-dns project
+- [Technitium DNS Server](https://technitium.com/dns/) - Self-hosted DNS server
+- [kubernetes-sigs](https://github.com/kubernetes-sigs) - Kubernetes Special Interest Groups
+
+## Support
+
+- 📖 [Documentation](docs/)
+- 🐛 [Issue Tracker](https://github.com/klausklausen/external-dns-webhook-technitium/issues)
+- 💬 [Discussions](https://github.com/klausklausen/external-dns-webhook-technitium/discussions)
+
+## Roadmap
+
+- [ ] Support for additional record types (MX, SRV)
+- [ ] Metrics endpoint for Prometheus
+- [ ] Helm chart for easier deployment
+- [ ] Integration tests
+- [ ] Support for multiple Technitium instances
+- [ ] TLS support for webhook endpoint

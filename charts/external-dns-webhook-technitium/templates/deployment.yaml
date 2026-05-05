@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "external-dns-webhook-technitium.fullname" . }}
+  labels:
+    {{- include "external-dns-webhook-technitium.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "external-dns-webhook-technitium.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "external-dns-webhook-technitium.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "external-dns-webhook-technitium.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: 8888
+          protocol: TCP
+        env:
+        - name: TECHNITIUM_URL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: TECHNITIUM_URL
+        {{- if .Values.technitium.token }}
+        - name: TECHNITIUM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: TECHNITIUM_TOKEN
+        {{- else }}
+        - name: TECHNITIUM_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: TECHNITIUM_USERNAME
+        - name: TECHNITIUM_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: TECHNITIUM_PASSWORD
+        {{- end }}
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: LOG_LEVEL
+        - name: LOG_FORMAT
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: LOG_FORMAT
+        {{- if .Values.technitium.domainFilter }}
+        - name: DOMAIN_FILTER
+          valueFrom:
+            configMapKeyRef:
+              name: {{ include "external-dns-webhook-technitium.fullname" . }}
+              key: DOMAIN_FILTER
+        {{- end }}
+        {{- with .Values.env }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        livenessProbe:
+          {{- toYaml .Values.livenessProbe | nindent 12 }}
+        readinessProbe:
+          {{- toYaml .Values.readinessProbe | nindent 12 }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        {{- with .Values.extraVolumeMounts }}
+        volumeMounts:
+          {{- toYaml . | nindent 12 }}
+        {{- end }}
+      {{- with .Values.extraVolumes }}
+      volumes:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
