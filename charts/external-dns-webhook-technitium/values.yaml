@@ -19,11 +19,17 @@ technitium:
   url: "http://technitium-dns:5380"
   
   # Authentication credentials
-  username: "admin"
-  password: "admin"
+  username: {}
+    # secretName: "technitium-credentials"
+    # secretKey: "username"
+  password: {}
+    # secretName: "technitium-credentials"
+    # secretKey: "password"
   
   # Optional: API token (if using token-based auth instead of username/password)
-  token: ""
+  token:
+    secretName: "technitium-credentials"
+    secretKey: "token"
   
   # Domain filter - only manage DNS records for these domains
   # Empty list means all domains will be managed

@@ -45,19 +45,19 @@ spec:
         - name: TECHNITIUM_TOKEN
           valueFrom:
             secretKeyRef:
-              name: {{ include "external-dns-webhook-technitium.fullname" . }}
-              key: TECHNITIUM_TOKEN
+              name: {{ .Values.technitium.token.secretName }}
+              key: {{ .Values.technitium.token.secretKey }}
         {{- else }}
         - name: TECHNITIUM_USERNAME
           valueFrom:
             secretKeyRef:
-              name: {{ include "external-dns-webhook-technitium.fullname" . }}
-              key: TECHNITIUM_USERNAME
+              name: {{ .Values.technitium.username.secretName }}
+              key: {{ .Values.technitium.username.secretKey }}
         - name: TECHNITIUM_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ include "external-dns-webhook-technitium.fullname" . }}
-              key: TECHNITIUM_PASSWORD
+              name: {{ .Values.technitium.password.secretName }}
+              key: {{ .Values.technitium.password.secretKey }}
         {{- end }}
         - name: LOG_LEVEL
           valueFrom:
