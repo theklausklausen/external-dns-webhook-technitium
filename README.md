@@ -199,6 +199,81 @@ just clean-all      # Delete everything including minikube
 3. Redeploy the webhook: `just redeploy-webhook`
 4. Check the logs: `just logs-webhook`
 
+
+## Example: Deploying with HelmChart CR (Rancher)
+
+Below is an example of deploying external-dns with the Technitium webhook provider using a HelmChart custom resource (as used by Rancher):
+
+```yaml
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: external-dns
+  namespace: kube-system
+spec:
+  chart: external-dns
+  repo: https://kubernetes-sigs.github.io/external-dns/
+  targetNamespace: external-dns
+  createNamespace: true
+  version: 1.19.0
+  valuesContent: |-
+    provider:
+      name: webhook
+      webhook:
+        image:
+          repository: theklausklausen/external-dns-webhook-technitium
+          tag: 1.5.0
+        env:
+          - name: TECHNITIUM_URL
+            value: "http://technitium-cluster-ip.technitium.svc.cluster.local:80"
+          - name: TECHNITIUM_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: technitium-api-token
+                key: token
+          - name: LOG_LEVEL
+            value: "info"
+          - name: TZ
+            value: 'Europe/Berlin'
+          - name: DOMAIN_FILTER
+            value: "kk.int"
+          - name: LOG_LEVEL
+            value: "DEBUG"
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          initialDelaySeconds: 15
+          httpGet:
+            port: 8888
+        readinessProbe:
+          initialDelaySeconds: 10
+          httpGet:
+            port: 8888
+        service:
+          port: 8888
+    env:
+      - name: TZ
+        value: 'Europe/Berlin'
+    rbac:
+      create: true
+    serviceAccount:
+      create: true
+    livenessProbe:
+      initialDelaySeconds: 60
+    readinessProbe:
+      initialDelaySeconds: 30
+```
+
+This example demonstrates how to deploy external-dns with the Technitium webhook provider using Rancher's HelmChart CRD. Adjust image repository, tags, and environment variables as needed for your environment.
+
+---
 ## Usage with Kubernetes
 
 ### Service Annotation
