@@ -161,8 +161,9 @@ func (c *Client) CreateZone(zone string) error {
 
 	data, err := c.doRequest(http.MethodGet, "/api/zones/create", params)
 	if err != nil {
-		// Check if zone already exists
-		if strings.Contains(err.Error(), "already exists") {
+		// Check if zone already exists (handle multiple message formats)
+		lowerErr := strings.ToLower(err.Error())
+		if strings.Contains(lowerErr, "already exists") || strings.Contains(lowerErr, "zone already exists") {
 			log.Infof("Zone %s already exists", zone)
 			return nil
 		}

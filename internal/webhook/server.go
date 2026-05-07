@@ -137,6 +137,10 @@ func (s *Server) handleApplyChanges(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debugf("Received changes: Create=%d, UpdateOld=%d, UpdateNew=%d, Delete=%d",
+		len(changes.Create), len(changes.UpdateOld), len(changes.UpdateNew), len(changes.Delete))
+	log.Debugf("%+v", changes)
+
 	log.Infof("Applying changes: Create=%d, UpdateOld=%d, UpdateNew=%d, Delete=%d",
 		len(changes.Create), len(changes.UpdateOld), len(changes.UpdateNew), len(changes.Delete))
 
