@@ -180,14 +180,17 @@ func (p *TechnitiumProvider) createEndpoint(ep *endpoint.Endpoint) error {
 			ttl = 300 // Default TTL
 		}
 
+		log.Debugf("Attempting to create record: zone=%s name=%s type=%s ttl=%d target=%s", zone, ep.DNSName, ep.RecordType, ttl, target)
 		if err := p.client.AddRecord(zone, ep.DNSName, ep.RecordType, ttl, target); err != nil {
 			// If record already exists, try to update it
 			if strings.Contains(err.Error(), "already exists") {
 				log.Infof("Record %s already exists, skipping", ep.DNSName)
 				continue
 			}
+			log.Errorf("Failed to create record: zone=%s name=%s type=%s target=%s error=%v", zone, ep.DNSName, ep.RecordType, target, err)
 			return err
 		}
+		log.Debugf("Successfully created record: zone=%s name=%s type=%s ttl=%d target=%s", zone, ep.DNSName, ep.RecordType, ttl, target)
 	}
 
 	return nil

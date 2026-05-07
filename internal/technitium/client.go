@@ -159,15 +159,17 @@ func (c *Client) CreateZone(zone string) error {
 	params.Set("zone", zone)
 	params.Set("type", "Primary")
 
-	data, err := c.doRequest(http.MethodGet, "/api/zones/create", params)
-	if err != nil {
-		// Check if zone already exists (handle multiple message formats)
-		if strings.Contains(err.Error(), "Zone already exists") {
-			log.Infof("Zone %s already exists", zone)
-			return nil
-		}
-		return fmt.Errorf("failed to create zone: %w", err)
-	}
+		       data, err := c.doRequest(http.MethodGet, "/api/zones/create", params)
+		       if err != nil {
+			       log.Debugf("CreateZone: raw error from doRequest: %v", err)
+			       // Check if zone already exists (handle multiple message formats, case-insensitive)
+			       lowerErr := strings.ToLower(err.Error())
+			       if strings.Contains(lowerErr, "already exists") || strings.Contains(lowerErr, "zone already exists") {
+				       log.Infof("Zone %s already exists", zone)
+				       return nil
+			       }
+			       return fmt.Errorf("failed to create zone: %w", err)
+		       }
 
 	var resp APIResponse
 	if err := json.Unmarshal(data, &resp); err != nil {
