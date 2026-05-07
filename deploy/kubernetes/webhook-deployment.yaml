@@ -12,7 +12,7 @@ metadata:
 data:
   TECHNITIUM_URL: "http://technitium-dns.external-dns.svc.cluster.local:5380"
   TECHNITIUM_USER: "admin"
-  LOG_LEVEL: "DEBUG"
+  LOG_LEVEL: "debug"
   LOG_FORMAT: "text"
   WEBHOOK_ADDR: ":8888"
 ---
