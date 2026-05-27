@@ -403,8 +403,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 - 📖 [Documentation](docs/)
-- 🐛 [Issue Tracker](https://github.com/klausklausen/external-dns-webhook-technitium/issues)
-- 💬 [Discussions](https://github.com/klausklausen/external-dns-webhook-technitium/discussions)
+- 🐛 [Issue Tracker](https://github.com/theklausklausen/external-dns-webhook-technitium/issues)
+- 💬 [Discussions](https://github.com/theklausklausen/external-dns-webhook-technitium/discussions)
 
 ## Roadmap
 
