@@ -62,9 +62,11 @@ func main() {
 
 	// Verify connection
 	if err := client.HealthCheck(); err != nil {
-		log.Fatalf("Failed to connect to Technitium: %v", err)
+		log.Warnf("Initial Technitium connectivity check failed: %v", err)
+		log.Warn("Starting webhook anyway; requests will fail until Technitium becomes reachable")
+	} else {
+		log.Info("Successfully connected to Technitium DNS server")
 	}
-	log.Info("Successfully connected to Technitium DNS server")
 
 	// Create domain filter
 	filter := createDomainFilter(*domainFilter)
