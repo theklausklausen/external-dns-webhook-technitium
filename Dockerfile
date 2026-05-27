@@ -1,6 +1,9 @@
 # Build stage
 FROM golang:1.21-alpine AS builder
 
+ARG TARGETOS
+ARG TARGETARCH
+
 # Install build dependencies
 RUN apk add --no-cache git ca-certificates
 
@@ -14,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Build the application
-RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -ldflags="-w -s" -o webhook ./cmd/webhook
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -installsuffix cgo -ldflags="-w -s" -o webhook ./cmd/webhook
 
 # Final stage
 FROM alpine:3.19 AS prod

@@ -223,10 +223,10 @@ spec:
       webhook:
         image:
           repository: theklausklausen/external-dns-webhook-technitium
-          tag: 1.5.0
+          tag: latest
         env:
           - name: TECHNITIUM_URL
-            value: "http://technitium-cluster-ip.technitium.svc.cluster.local:80"
+            value: "http://technitium-svc.technitium.svc.cluster.local:80"
           - name: TECHNITIUM_TOKEN
             valueFrom:
               secretKeyRef:
@@ -237,9 +237,9 @@ spec:
           - name: TZ
             value: 'Europe/Berlin'
           - name: DOMAIN_FILTER
-            value: "kk.int"
+            value: "example.com"
           - name: LOG_LEVEL
-            value: "DEBUG"
+            value: "debug"
         securityContext:
           allowPrivilegeEscalation: false
           readOnlyRootFilesystem: true
