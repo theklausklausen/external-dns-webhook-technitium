@@ -29,7 +29,7 @@ A webhook provider for [external-dns](https://github.com/kubernetes-sigs/externa
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/klausklausen/external-dns-webhook-technitium.git
+   git clone https://github.com/theklausklausen/external-dns-webhook-technitium.git
    cd external-dns-webhook-technitium
    ```
 
@@ -222,7 +222,7 @@ spec:
       name: webhook
       webhook:
         image:
-          repository: theklausklausen/external-dns-webhook-technitium
+          repository: ghcr.io/theklausklausen/external-dns-webhook-technitium
           tag: latest
         env:
           - name: TECHNITIUM_URL
