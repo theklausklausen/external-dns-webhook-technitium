@@ -168,11 +168,6 @@ func (p *TechnitiumProvider) createEndpoint(ep *endpoint.Endpoint) error {
 		return fmt.Errorf("could not determine zone for %s", ep.DNSName)
 	}
 
-	// Ensure zone exists
-	if err := p.client.CreateZone(zone); err != nil {
-		return fmt.Errorf("failed to ensure zone exists: %w", err)
-	}
-
 	// Create records for each target
 	for _, target := range ep.Targets {
 		ttl := int(ep.RecordTTL)
@@ -185,6 +180,10 @@ func (p *TechnitiumProvider) createEndpoint(ep *endpoint.Endpoint) error {
 			// If record already exists, try to update it
 			if strings.Contains(err.Error(), "already exists") {
 				log.Infof("Record %s already exists, skipping", ep.DNSName)
+				continue
+			}
+			if isZoneMissingError(err) {
+				log.Errorf("Failed to create record because zone does not exist: zone=%s name=%s type=%s target=%s error=%v", zone, ep.DNSName, ep.RecordType, target, err)
 				continue
 			}
 			log.Errorf("Failed to create record: zone=%s name=%s type=%s target=%s error=%v", zone, ep.DNSName, ep.RecordType, target, err)
@@ -260,6 +259,18 @@ func isSupportedRecordType(recordType string) bool {
 		"TXT":   true,
 	}
 	return supportedTypes[recordType]
+}
+
+func isZoneMissingError(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	errText := strings.ToLower(err.Error())
+	return strings.Contains(errText, "zone not found") ||
+		strings.Contains(errText, "zone does not exist") ||
+		strings.Contains(errText, "no such zone") ||
+		(strings.Contains(errText, "not found") && strings.Contains(errText, "zone"))
 }
 
 // Ensure TechnitiumProvider implements the provider.Provider interface
