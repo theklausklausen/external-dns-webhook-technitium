@@ -130,6 +130,22 @@ func (c *Client) ListZones() ([]Zone, error) {
 	return resp.Zones, nil
 }
 
+// ZoneExists checks whether a DNS zone already exists
+func (c *Client) ZoneExists(zoneName string) (bool, error) {
+	zones, err := c.ListZones()
+	if err != nil {
+		return false, fmt.Errorf("failed to list zones: %w", err)
+	}
+
+	for _, zone := range zones {
+		if strings.EqualFold(zone.Name, zoneName) {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // GetRecords retrieves all records for a specific zone
 func (c *Client) GetRecords(zone string) ([]Record, error) {
 	params := url.Values{}

@@ -168,9 +168,16 @@ func (p *TechnitiumProvider) createEndpoint(ep *endpoint.Endpoint) error {
 		return fmt.Errorf("could not determine zone for %s", ep.DNSName)
 	}
 
-	// Ensure zone exists
-	if err := p.client.CreateZone(zone); err != nil {
-		return fmt.Errorf("failed to ensure zone exists: %w", err)
+	zoneExists, err := p.client.ZoneExists(zone)
+	if err != nil {
+		return fmt.Errorf("failed to check whether zone exists: %w", err)
+	}
+
+	if !zoneExists {
+		log.Infof("Zone %s does not exist, creating it", zone)
+		if err := p.client.CreateZone(zone); err != nil {
+			return fmt.Errorf("failed to create zone %s: %w", zone, err)
+		}
 	}
 
 	// Create records for each target
