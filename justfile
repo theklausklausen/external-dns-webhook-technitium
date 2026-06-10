@@ -8,6 +8,7 @@ default:
 MINIKUBE_PROFILE := "external-dns"
 DOCKER_IMAGE := "external-dns-webhook-technitium:latest"
 NAMESPACE := "external-dns"
+E2E_COMPOSE_FILE := "e2e/docker-compose.yml"
 
 # Install prerequisites
 install-deps:
@@ -52,6 +53,28 @@ build:
 test:
     @echo "Running tests..."
     go test -v ./...
+
+# Run end-to-end tests using docker compose (Technitium + webhook)
+e2e:
+    @set -eu; \
+    command -v docker >/dev/null 2>&1 || (echo "docker not found. Install from https://docs.docker.com/get-docker/" && exit 1); \
+    command -v curl >/dev/null 2>&1 || (echo "curl not found. Install curl and retry." && exit 1); \
+        cleanup() { \
+            echo "Stopping e2e stack..."; \
+            just e2e-down; \
+        }; \
+        trap cleanup EXIT INT TERM; \
+    echo "Starting e2e stack from {{E2E_COMPOSE_FILE}}..."; \
+    just e2e-up; \
+        sh e2e/run.sh
+
+# Start only the e2e docker compose stack
+e2e-up:
+    docker compose -f {{E2E_COMPOSE_FILE}} up -d --build
+
+# Stop and remove the e2e docker compose stack
+e2e-down:
+    docker compose -f {{E2E_COMPOSE_FILE}} down -v --remove-orphans
 
 # Build Docker image
 docker-build:

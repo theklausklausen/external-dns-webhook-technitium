@@ -175,6 +175,9 @@ just build
 # Run tests
 just test
 
+# Run end-to-end tests (default target: local docker-compose Technitium)
+just e2e
+
 # Build Docker image
 just docker-build
 
@@ -191,6 +194,46 @@ just restart-external-dns
 just clean          # Delete Kubernetes resources
 just clean-all      # Delete everything including minikube
 ```
+
+### End-to-End Tests
+
+The repository includes an end-to-end workflow based on:
+
+- [e2e/docker-compose.yml](e2e/docker-compose.yml): starts a dedicated Technitium container and a webhook container built from local source.
+- [e2e/run.sh](e2e/run.sh): performs the test flow by calling webhook endpoints with `curl` and validating results via `curl` against both webhook and Technitium APIs.
+
+Run it with:
+
+```bash
+just e2e
+```
+
+Useful helpers:
+
+```bash
+# Start stack only
+just e2e-up
+
+# Stop stack only
+just e2e-down
+```
+
+You can customize behavior with environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `E2E_TECHNITIUM_URL` | `http://127.0.0.1:5380` | URL used by the test script |
+| `E2E_WEBHOOK_URL` | `http://127.0.0.1:8888` | Webhook URL used by the test script |
+| `E2E_TECHNITIUM_USER` | `admin` | Username (used when token is empty) |
+| `E2E_TECHNITIUM_PASSWORD` | `admin` | Password used by Technitium and test login |
+| `E2E_TECHNITIUM_PORT` | `5380` | Host port mapped to Technitium API port |
+| `E2E_WEBHOOK_PORT` | `8888` | Host port mapped to webhook API port |
+| `E2E_DNS_PORT` | `5053` | Host port mapped to Technitium DNS (TCP/UDP 53) |
+| `E2E_ZONE` | `e2e.local` | Zone used for tests |
+| `E2E_RECORD_NAME` | generated | Record name used in the lifecycle test |
+| `E2E_RECORD_TYPE` | `A` | Record type for test record (`A`, `AAAA`, `CNAME`, `TXT`) |
+| `E2E_RECORD_VALUE` | `10.10.10.10` | Record value used in test |
+| `E2E_RECORD_TTL` | `60` | TTL for created record |
 
 ### Making Changes
 

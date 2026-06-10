@@ -1,0 +1,34 @@
+services:
+  technitium:
+    image: technitium/dns-server:latest
+    container_name: external-dns-webhook-technitium-e2e-technitium
+    environment:
+      DNS_SERVER_DOMAIN: dns-server
+      DNS_SERVER_ADMIN_PASSWORD: ${E2E_TECHNITIUM_PASSWORD:-admin}
+    ports:
+      - "${E2E_TECHNITIUM_PORT:-5380}:5380"
+      - "${E2E_DNS_PORT:-5053}:53/tcp"
+      - "${E2E_DNS_PORT:-5053}:53/udp"
+
+  webhook:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: external-dns-webhook-technitium-e2e-webhook
+    environment:
+      TECHNITIUM_URL: http://technitium:5380
+      TECHNITIUM_USER: ${E2E_TECHNITIUM_USER:-admin}
+      TECHNITIUM_PASSWORD: ${E2E_TECHNITIUM_PASSWORD:-admin}
+      WEBHOOK_ADDR: :8888
+      DOMAIN_FILTER: ${E2E_ZONE:-e2e.local}
+      LOG_LEVEL: debug
+    restart: on-failure
+    depends_on:
+      - technitium
+    ports:
+      - "${E2E_WEBHOOK_PORT:-8888}:8888"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:8888/healthz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 30

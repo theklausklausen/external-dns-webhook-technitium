@@ -103,6 +103,102 @@ render helm chart:
     HELM_CHART_DIR: charts/
     PACKAGE_NAME: external-dns-webhook-technitium
   <<: *only_on_helm_change
+
+e2e test:
+  stage: test
+  image: $GO_IMAGE
+  services:
+    - name: technitium/dns-server:latest
+      alias: technitium
+  variables:
+    DNS_SERVER_DOMAIN: dns-server
+    DNS_SERVER_ADMIN_PASSWORD: admin
+    E2E_TECHNITIUM_URL: http://technitium:5380
+    E2E_TECHNITIUM_USER: admin
+    E2E_TECHNITIUM_PASSWORD: admin
+    E2E_WEBHOOK_URL: http://127.0.0.1:8888
+    E2E_DNS_SERVER: technitium
+    E2E_DNS_PORT: "53"
+    E2E_ZONE: e2e.local
+  script:
+    - apt-get update && apt-get install -y --no-install-recommends curl dnsutils ca-certificates
+    - cd "$CI_PROJECT_DIR"
+    - go build -o /tmp/webhook ./cmd/webhook
+    - TECHNITIUM_URL=$E2E_TECHNITIUM_URL TECHNITIUM_USER=$E2E_TECHNITIUM_USER TECHNITIUM_PASSWORD=$E2E_TECHNITIUM_PASSWORD WEBHOOK_ADDR=:8888 DOMAIN_FILTER=$E2E_ZONE LOG_LEVEL=debug /tmp/webhook >/tmp/webhook.log 2>&1 &
+    - WEBHOOK_PID=$!
+    - trap 'kill $WEBHOOK_PID >/dev/null 2>&1 || true; echo "--- webhook log ---"; cat /tmp/webhook.log || true' EXIT
+    - |
+      set -eu
+      WEBHOOK_URL="${E2E_WEBHOOK_URL:-http://127.0.0.1:8888}"
+      TECHNITIUM_URL="${E2E_TECHNITIUM_URL:-http://technitium:5380}"
+      TECHNITIUM_USER="${E2E_TECHNITIUM_USER:-admin}"
+      TECHNITIUM_PASSWORD="${E2E_TECHNITIUM_PASSWORD:-admin}"
+      DNS_SERVER="${E2E_DNS_SERVER:-technitium}"
+      DNS_PORT="${E2E_DNS_PORT:-53}"
+      ZONE="${E2E_ZONE:-e2e.local}"
+      RECORD_TYPE="${E2E_RECORD_TYPE:-A}"
+      RECORD_VALUE="${E2E_RECORD_VALUE:-10.10.10.10}"
+      RECORD_TTL="${E2E_RECORD_TTL:-60}"
+      RECORD_NAME="${E2E_RECORD_NAME:-webhook-$(date +%s).${ZONE}}"
+      CREATE_OUT="$(mktemp)"
+      DELETE_OUT="$(mktemp)"
+      trap 'rm -f "$CREATE_OUT" "$DELETE_OUT"' EXIT
+
+      wait_http_ok() {
+        name="$1"
+        url="$2"
+        attempts=0
+        until curl -fsS "$url" >/dev/null 2>&1; do
+          attempts=$((attempts + 1))
+          if [ "$attempts" -ge 60 ]; then
+            echo "[e2e] timeout waiting for ${name} at ${url}" >&2
+            exit 1
+          fi
+          sleep 2
+        done
+      }
+
+      echo "[e2e] waiting for Technitium and webhook"
+      wait_http_ok "Technitium" "${TECHNITIUM_URL}/"
+      wait_http_ok "webhook" "${WEBHOOK_URL}/healthz"
+
+      LOGIN_JSON="$(curl -fsS -X POST "${TECHNITIUM_URL}/api/user/login" --data-urlencode "user=${TECHNITIUM_USER}" --data-urlencode "pass=${TECHNITIUM_PASSWORD}")"
+      TOKEN="$(printf '%s' "$LOGIN_JSON" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')"
+      [ -n "$TOKEN" ]
+
+      ZONE_CREATE_JSON="$(curl -fsS "${TECHNITIUM_URL}/api/zones/create?token=${TOKEN}&zone=${ZONE}&type=Primary" || true)"
+      printf '%s' "$ZONE_CREATE_JSON" | grep -Eiq '"status":"ok"|already exists'
+
+      case "$RECORD_TYPE" in
+        A|AAAA) value_key="ipAddress" ;;
+        CNAME) value_key="cname" ;;
+        TXT) value_key="text" ;;
+        *) echo "unsupported record type: $RECORD_TYPE" >&2; exit 1 ;;
+      esac
+
+      curl -fsS "${TECHNITIUM_URL}/api/zones/records/delete?token=${TOKEN}&domain=${RECORD_NAME}&zone=${ZONE}&type=${RECORD_TYPE}&${value_key}=${RECORD_VALUE}" >/dev/null 2>&1 || true
+
+      CREATE_PAYLOAD='{"create":[{"dnsName":"'"${RECORD_NAME}"'","targets":["'"${RECORD_VALUE}"'"],"recordType":"'"${RECORD_TYPE}"'","recordTTL":'"${RECORD_TTL}"'}],"updateOld":[],"updateNew":[],"delete":[]}'
+      CREATE_STATUS="$(curl -sS -o "$CREATE_OUT" -w '%{http_code}' -X POST "${WEBHOOK_URL}/records" -H 'Content-Type: application/json' --data "$CREATE_PAYLOAD")"
+      [ "$CREATE_STATUS" = "204" ] || (cat "$CREATE_OUT" >&2; exit 1)
+
+      sleep 2
+      ZONE_RECORDS="$(curl -fsS "${TECHNITIUM_URL}/api/zones/records/get?token=${TOKEN}&domain=${ZONE}&listZone=true")"
+      printf '%s' "$ZONE_RECORDS" | grep -Fq "$RECORD_NAME"
+      printf '%s' "$ZONE_RECORDS" | grep -Fq "$RECORD_VALUE"
+
+      DNS_ANSWER="$(dig +short @"${DNS_SERVER}" -p "${DNS_PORT}" "${RECORD_NAME}" "${RECORD_TYPE}" | tr -d '\r')"
+      printf '%s' "$DNS_ANSWER" | grep -Fq "$RECORD_VALUE"
+
+      DELETE_PAYLOAD='{"create":[],"updateOld":[],"updateNew":[],"delete":[{"dnsName":"'"${RECORD_NAME}"'","targets":["'"${RECORD_VALUE}"'"],"recordType":"'"${RECORD_TYPE}"'","recordTTL":'"${RECORD_TTL}"'}]}'
+      DELETE_STATUS="$(curl -sS -o "$DELETE_OUT" -w '%{http_code}' -X POST "${WEBHOOK_URL}/records" -H 'Content-Type: application/json' --data "$DELETE_PAYLOAD")"
+      [ "$DELETE_STATUS" = "204" ] || (cat "$DELETE_OUT" >&2; exit 1)
+
+      sleep 2
+      ZONE_RECORDS_AFTER_DELETE="$(curl -fsS "${TECHNITIUM_URL}/api/zones/records/get?token=${TOKEN}&domain=${ZONE}&listZone=true")"
+      ! printf '%s' "$ZONE_RECORDS_AFTER_DELETE" | grep -Fq "$RECORD_NAME"
+      echo "[e2e] e2e scenario passed"
+  <<: *only_on_code_change
 # run_test_suite:
 #   stage: test
 #   image: golang:1.26
