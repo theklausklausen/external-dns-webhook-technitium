@@ -1,9 +1,9 @@
 module github.com/klausklausen/external-dns-webhook-technitium
 
-go 1.21
+go 1.24
 
 require (
-	github.com/go-chi/chi/v5 v5.0.11
+	github.com/go-chi/chi/v5 v5.5.0
 	github.com/sirupsen/logrus v1.9.3
 	sigs.k8s.io/external-dns v0.14.0
 )
